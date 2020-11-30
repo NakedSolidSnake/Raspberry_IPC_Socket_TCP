@@ -41,7 +41,7 @@ static int send(char *buffer, int size);
         "OFF"
     };
 
-static Button_t button7 = {
+static Button_t button = {
     .gpio.pin = 7,
     .gpio.eMode = eModeInput,
     .ePullMode = ePullModePullUp,
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
             .cb.send = send,
             .cb.receive = NULL};
 
-    if (Button_init(&button7))
+    if (Button_init(&button))
         return EXIT_FAILURE;
 
     Client_connect(&cl, "192.168.0.25", "8080");
@@ -70,10 +70,10 @@ static int send(char *buffer, int size)
     static int state = 0;
     while (1)
     {
-        if (!Button_read(&button7))
+        if (!Button_read(&button))
         {
             usleep(_1ms * 40);
-            while (!Button_read(&button7))
+            while (!Button_read(&button))
                 ;
             usleep(_1ms * 40);
             state ^= 0x01;
