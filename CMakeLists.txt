@@ -72,3 +72,5 @@ target_sources(launch_processes
   )
  
 install(TARGETS launch_processes DESTINATION bin)
+
+file(COPY config/kill_process.sh DESTINATION bin)
