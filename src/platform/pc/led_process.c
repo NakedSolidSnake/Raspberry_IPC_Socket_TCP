@@ -53,7 +53,7 @@ bool Init(void *object)
 bool Set(void *object, uint8_t state)
 {
     (void)object;    
-    openlog("LED PIPE", LOG_PID | LOG_CONS , LOG_USER);
+    openlog("LED TCP", LOG_PID | LOG_CONS , LOG_USER);
     syslog(LOG_INFO, "LED Status: %s", state ? "On": "Off");
     closelog(); 
     return true;
