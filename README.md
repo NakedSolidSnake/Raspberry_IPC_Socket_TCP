@@ -2,563 +2,170 @@
   <img src="https://i.ytimg.com/vi/ou8UVN7SG6s/maxresdefault.jpg">
 </p>
 
-# _Socket_
+# _TCP_
+
+## Tópicos
+* [Introdução](#introdução)
+* [Implementação](#implementação)
+* [launch_processes](#launch_processes)
+* [button_interface](#button_interface)
+* [led_interface](#led_interface)
+* [Compilando, Executando e Matando os processos](#compilando-executando-e-matando-os-processos)
+* [Compilando](#compilando)
+* [Clonando o projeto](#clonando-o-projeto)
+* [Selecionando o modo](#selecionando-o-modo)
+* [Modo PC](#modo-pc)
+* [Modo RASPBERRY](#modo-raspberry)
+* [Executando](#executando)
+* [Interagindo com o exemplo](#interagindo-com-o-exemplo)
+* [MODO PC](#modo-pc-1)
+* [MODO RASPBERRY](#modo-raspberry-1)
+* [Matando os processos](#matando-os-processos)
+* [Conclusão](#conclusão)
+* [Referência](#referência)
+
 ## Introdução
+Preencher
+
 ## Implementação
-### biblioteca
-A implementação de um socket é um pouco extensa para melhorar a compreensão da implementação, a parte de pertinente a controle do servidor foi abstraída
-#### client.h
+
+Para demonstrar o uso desse IPC, iremos utilizar o modelo Produtor/Consumidor, onde o processo Produtor(_button_process_) vai escrever seu estado interno no arquivo, e o Consumidor(_led_process_) vai ler o estado interno e vai aplicar o estado para si. Aplicação é composta por três executáveis sendo eles:
+* _launch_processes_ - é responsável por lançar os processos _button_process_ e _led_process_ atráves da combinação _fork_ e _exec_
+* _button_interface_ - é reponsável por ler o GPIO em modo de leitura da Raspberry Pi e escrever o estado interno no arquivo
+* _led_interface_ - é reponsável por ler do arquivo o estado interno do botão e aplicar em um GPIO configurado como saída
+
+### *launch_processes*
+
+No _main_ criamos duas variáveis para armazenar o PID do *button_process* e do *led_process*, e mais duas variáveis para armazenar o resultado caso o _exec_ venha a falhar.
 ```c
-#ifndef __CLIENT_H
-#define __CLIENT_H
-
-#define CONSOLE_DISABLE         0
-#define CONSOLE_ENABLE          1
-
-#define BUFFER_RECV_SEND        4092
-#define BUFFER_CONSOLE          4092
-
-
-typedef struct 
-{
-    int (*receive)(void *buffer, int size);
-    int (*send)(void *buffer, int size);
-}Callback_t;
-
-typedef struct 
-{
-    int socket;
-    int console;
-    Callback_t cb;
-}Client_t;
-
-int Client_connect(Client_t *cl, const char *server_ip, const char *port);
-int Client_exec(Client_t *cl);
-
-#endif
+int pid_button, pid_led;
+int button_status, led_status;
 ```
-#### client.c
+
+Em seguida criamos um processo clone, se processo clone for igual a 0, criamos um _array_ de *strings* com o nome do programa que será usado pelo _exec_, em caso o _exec_ retorne, o estado do retorno é capturado e será impresso no *stdout* e aborta a aplicação. Se o _exec_ for executado com sucesso o programa *button_process* será carregado. 
 ```c
-#include <client.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+pid_button = fork();
 
-#define ISVALIDSOCKET(s) ((s) >= 0)
-
-int Client_connect(Client_t *cl, const char *server_ip, const char *port)
+if(pid_button == 0)
 {
-
-    if (!cl)
-    {
-        return EXIT_FAILURE;
-    }
-
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_socktype = SOCK_STREAM;
-    struct addrinfo *peer_address;
-    if (getaddrinfo(server_ip, port, &hints, &peer_address))
-    {
-        return 1;
-    }
-
-    char address_buffer[100];
-    char service_buffer[100];
-    getnameinfo(peer_address->ai_addr, peer_address->ai_addrlen,
-                address_buffer, sizeof(address_buffer),
-                service_buffer, sizeof(service_buffer),
-                NI_NUMERICHOST);
-
-    cl->socket = socket(peer_address->ai_family,
-                        peer_address->ai_socktype, peer_address->ai_protocol);
-    if (!ISVALIDSOCKET(cl->socket))
-    {
-        return 1;
-    }
-
-    if (connect(cl->socket,
-                peer_address->ai_addr, peer_address->ai_addrlen))
-    {
-        return 1;
-    }
-    freeaddrinfo(peer_address);
-
-    return EXIT_SUCCESS;
-}
-
-int Client_exec(Client_t *cl)
-{
-    char buffer[BUFFER_RECV_SEND] = {0};
-    while (1)
-    {
-
-        fd_set reads;
-        FD_ZERO(&reads);
-        FD_SET(cl->socket, &reads);
-        FD_SET(0, &reads);
-
-        struct timeval timeout;
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;
-
-        if (cl->cb.send)
-        {
-            cl->cb.send(buffer, BUFFER_RECV_SEND);
-            send(cl->socket, buffer, strlen(buffer) + 1, 0);
-        }
-
-        if (select(cl->socket + 1, &reads, 0, 0, &timeout) < 0)
-        {
-            return 1;
-        }
-
-        if (FD_ISSET(cl->socket, &reads))
-        {            
-            int bytes_received = recv(cl->socket, buffer, BUFFER_RECV_SEND, 0);
-            if (cl->cb.receive)
-            {
-                cl->cb.receive(buffer, sizeof(buffer));
-            }
-            if (bytes_received < 1)
-            {
-                break;
-            }
-        }
-
-        if (cl->console == CONSOLE_DISABLE)
-            continue;
-
-        if (FD_ISSET(0, &reads))
-        {
-            char readLine[BUFFER_CONSOLE];
-            if (!fgets(readLine, BUFFER_CONSOLE, stdin))
-                break;
-
-            send(cl->socket, readLine, strlen(buffer), 0);
-        }
-    } //end while(1)
-
-    close(cl->socket);
-
-    return EXIT_SUCCESS;
-}
+    //start button process
+    char *args[] = {"./button_process", NULL};
+    button_status = execvp(args[0], args);
+    printf("Error to start button process, status = %d\n", button_status);
+    abort();
+}   
 ```
-#### server.h
+
+O mesmo procedimento é repetido novamente, porém com a intenção de carregar o *led_process*.
+
 ```c
-/*
- * MIT License
- *
- * Copyright (c) 2018 Lewis Van Winkle
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+pid_led = fork();
 
-#ifndef __SERVER_H
-#define __SERVER_H
-
-#define MAX_PORT_LEN             6
-#define MAX_BUFFER_SEND_RECV     1024
-#define LISTEN_AMOUNT            10
-
-
-/**
- * @brief Estrutura de callbacks para interagir com o server
- * 
- */
-typedef struct 
+if(pid_led == 0)
 {
-    int (*send)(char *buffer, int *size);   /**<! Callback para enviar dados pelo server */
-    int (*recv)(char *buffer, int size);    /**<! Callback para receber dados do server */
-}Server_Callback_t;
-
-
-/**
- * @brief Estrutura de contexto do server
- * 
- */
-typedef struct
-{
-    int socket;                 /**<! File descriptor do servidor */
-    char port[MAX_PORT_LEN];    /**<! Porta do servidor */
-    Server_Callback_t cb;       /**<! Callbacks */
-}Server_t;
-
-
-/**
- * @brief 
- * 
- * @param server Contexto do servidor
- * @return int  -1 quando contexto é invalido
- *               1 quando problema ao configurar o servidor
- *               0 sucesso
- */
-int Server_init(Server_t *server);
-
-/**
- * @brief Executa server com os parametros previamente iniciados em Server_init
- * 
- * @param server Contexto do servidor
- * @return int   1 em caso de falha
- *               0 em caso de sucesso
- */
-int Server_exec(Server_t *server);
-
-#endif
-```
-#### server.c
-```c
-#include <server.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <errno.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <string.h>
-
-#define ISVALIDSOCKET(s) ((s) >= 0)
-
-int Server_init(Server_t *server)
-{
-    struct addrinfo hints;
-
-    if(!server)
-        return -1;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    struct addrinfo *bind_address;
-    getaddrinfo(0, server->port, &hints, &bind_address);
-
-    server->socket = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
-    if (!ISVALIDSOCKET(server->socket)) {
-        fprintf(stderr, "socket() failed. (%d)\n", errno);
-        return 1;
-    }
-
-    int yes = 1;
-    if (setsockopt(server->socket, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(yes)) < 0) {
-        fprintf(stderr, "setsockopt() failed. (%d)\n", errno);
-    }
-    
-    if (bind(server->socket, bind_address->ai_addr, bind_address->ai_addrlen)) {
-        fprintf(stderr, "bind() failed. (%d)\n", errno);
-        return 1;
-    }
-    freeaddrinfo(bind_address);
-    
-    if (listen(server->socket, LISTEN_AMOUNT) < 0) {
-        fprintf(stderr, "listen() failed. (%d)\n", errno);
-        return 1;
-    }
-
-    return 0;
-}
-
-int Server_exec(Server_t *server)
-{  
-
-    fd_set master;
-    FD_ZERO(&master);
-    FD_SET(server->socket, &master);
-    int max_socket = server->socket;
-
-    while(1) {
-        fd_set reads;
-        reads = master;
-        if (select(max_socket+1, &reads, 0, 0, 0) < 0) {
-            fprintf(stderr, "select() failed. (%d)\n", errno);
-            return 1;
-        }
-
-        int i;
-        for(i = 1; i <= max_socket; ++i) {
-            if (FD_ISSET(i, &reads)) {
-
-                if (i == server->socket) {
-                    struct sockaddr_storage client_address;
-                    socklen_t client_len = sizeof(client_address);
-                    int socket_client = accept(server->socket, (struct sockaddr*) &client_address, &client_len);
-                    if (!ISVALIDSOCKET(socket_client)) {
-                        fprintf(stderr, "accept() failed. (%d)\n",
-                                errno);
-                        return 1;
-                    }
-
-                    FD_SET(socket_client, &master);
-                    if (socket_client > max_socket)
-                        max_socket = socket_client;
-
-                    char address_buffer[100];
-                    getnameinfo((struct sockaddr*)&client_address, client_len, address_buffer, sizeof(address_buffer), 0, 0,
-                            NI_NUMERICHOST);                    
-
-                } else {
-                    char buffer[MAX_BUFFER_SEND_RECV] = {0};
-                    int bytes_received = recv(i, buffer, 1024, 0);
-                    if (bytes_received < 1) {
-                        FD_CLR(i, &master);
-                        close(i);                        
-                        continue;
-                    }
-
-                    //Server process
-                    server->cb.recv(buffer, bytes_received);
-
-                    if(server->cb.send){
-                        server->cb.send(buffer, &bytes_received);
-                        send(i, buffer, bytes_received, 0);
-                    }
-
-                }
-
-            } //if FD_ISSET
-        } //for i to max_socket
-    } //while(1)
-
-    close(server->socket);
-    return 0;
-}
-
-```
-### launch_processes.c
-```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-int main(int argc, char *argv[])
-{
-    int pid_button, pid_led;
-    int button_status, led_status;
-
-    pid_button = fork();
-
-    if(pid_button == 0)
-    {
-        //start button process
-        char *args[] = {"./button_process", NULL};
-        button_status = execvp(args[0], args);
-        printf("Error to start button process, status = %d\n", button_status);
-        abort();
-    }   
-
-    pid_led = fork();
-
-    if(pid_led == 0)
-    {
-        //Start led process
-        char *args[] = {"./led_process", NULL};
-        led_status = execvp(args[0], args);
-        printf("Error to start led process, status = %d\n", led_status);
-        abort();
-    }
-
-    return EXIT_SUCCESS;
+    //Start led process
+    char *args[] = {"./led_process", NULL};
+    led_status = execvp(args[0], args);
+    printf("Error to start led process, status = %d\n", led_status);
+    abort();
 }
 ```
 
-### button_process.c
-```c
-/*
- * MIT License
- *
- * Copyright (c) 2018 Lewis Van Winkle
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+## *button_interface*
+descrever o código
+## *led_interface*
+descrever o código
 
-#include <unistd.h>
-#include <errno.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <client.h>
-#include <button.h>
+## Compilando, Executando e Matando os processos
+Para compilar e testar o projeto é necessário instalar a biblioteca de [hardware](https://github.com/NakedSolidSnake/Raspberry_lib_hardware) necessária para resolver as dependências de configuração de GPIO da Raspberry Pi.
 
-#define _1ms    1000
+## Compilando
+Para faciliar a execução do exemplo, o exemplo proposto foi criado baseado em uma interface, onde é possível selecionar se usará o hardware da Raspberry Pi 3, ou se a interação com o exemplo vai ser através de input feito por FIFO e o output visualizado através de LOG.
 
-static int send(char *buffer, int size);
+### Clonando o projeto
+Pra obter uma cópia do projeto execute os comandos a seguir:
 
- const char *states[] = 
-    {
-        "ON",
-        "OFF"
-    };
-
-static Button_t button = {
-    .gpio.pin = 7,
-    .gpio.eMode = eModeInput,
-    .ePullMode = ePullModePullUp,
-    .eIntEdge = eIntEdgeFalling,
-    .cb = NULL};
-
-int main(int argc, char *argv[])
-{
-
-    Client_t cl =
-        {
-            .socket = -1,
-            .console = CONSOLE_ENABLE,
-            .cb.send = send,
-            .cb.receive = NULL};
-
-    if (Button_init(&button))
-        return EXIT_FAILURE;
-
-    Client_connect(&cl, "192.168.0.25", "8080");
-    Client_exec(&cl);
-}
-
-static int send(char *buffer, int size)
-{
-    static int state = 0;
-    while (1)
-    {
-        if (!Button_read(&button))
-        {
-            usleep(_1ms * 40);
-            while (!Button_read(&button))
-                ;
-            usleep(_1ms * 40);
-            state ^= 0x01;
-            snprintf(buffer, strlen(states[state]) + 1, "%s",states[state]);
-            break;
-        }
-        else
-        {
-            usleep(_1ms);
-        }
-    }
-}
-
+```bash
+$ git clone https://github.com/NakedSolidSnake/Raspberry_IPC_Socket_TCP
+$ cd Raspberry_IPC_Socket_TCP
+$ mkdir build && cd build
 ```
 
-### led_process.c
-```c
-#include <server.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <led.h>
+### Selecionando o modo
+Para selecionar o modo devemos passar para o cmake uma variável de ambiente chamada de ARCH, e pode-se passar os seguintes valores, PC ou RASPBERRY, para o caso de PC o exemplo terá sua interface preenchida com os sources presentes na pasta src/platform/pc, que permite a interação com o exemplo através de FIFO e LOG, caso seja RASPBERRY usará os GPIO's descritos no [artigo](https://github.com/NakedSolidSnake/Raspberry_lib_hardware#testando-a-instala%C3%A7%C3%A3o-e-as-conex%C3%B5es-de-hardware).
 
-typedef void (*cb)(int led_state);
+#### Modo PC
+```bash
+$ cmake -DARCH=PC ..
+$ make
+```
 
-static int sender(char *buffer, int *size);
-static int receive(char *buffer, int size);
+#### Modo RASPBERRY
+```bash
+$ cmake -DARCH=RASPBERRY ..
+$ make
+```
 
-static void changeLed(int state);
+## Executando
+Para executar a aplicação execute o processo _*launch_processes*_ para lançar os processos *button_process* e *led_process* que foram determinados de acordo com o modo selecionado.
 
-typedef struct
-{
-    const char *command;
-    cb setLed;
-    const int state;
-} Table_t;
+```bash
+$ cd bin
+$ ./launch_processes
+```
 
-static Table_t command[] =
-    {
-        {"ON", changeLed, 1},
-        {"OFF", changeLed, 0}};
+Uma vez executado podemos verificar se os processos estão rodando atráves do comando 
+```bash
+$ ps -ef | grep _process
+```
 
-LED_t led =
-    {
-        .gpio.pin = 0,
-        .gpio.eMode = eModeOutput};
+O output 
+```bash
+pi        2773     1  0 10:25 pts/0    00:00:00 led_process
+pi        2774     1  1 10:25 pts/0    00:00:00 button_process 2773
+```
+## Interagindo com o exemplo
+Dependendo do modo de compilação selecionado a interação com o exemplo acontece de forma diferente
 
-int main()
-{
-    Server_t s =
-        {
-            .socket = -1,
-            .port = "8080",
-            .cb.recv = receive,
-            // .cb.send = sender
-	};
+### MODO PC
+Para o modo PC, precisamos abrir um terminal e monitorar os LOG's
+```bash
+$ sudo tail -f /var/log/syslog | grep LED
+```
 
-    if (LED_init(&led))
-        return EXIT_FAILURE;
+Dessa forma o terminal irá apresentar somente os LOG's referente ao exemplo.
 
-    Server_init(&s);
-    Server_exec(&s);
+Para simular o botão, o processo em modo PC cria uma FIFO para permitir enviar comandos para a aplicação, dessa forma todas as vezes que for enviado o número 0 irá logar no terminal onde foi configurado para o monitoramento, segue o exemplo
+```bash
+echo "0" > /tmp/signal_file
+```
 
-    return 0;
-}
+Output do LOG quando enviado o comando algumas vezez
+```bash
+Apr  6 06:22:37 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: On
+Apr  6 06:22:39 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
+Apr  6 06:22:40 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: On
+Apr  6 06:22:40 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
+Apr  6 06:22:41 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: On
+Apr  6 06:22:42 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
+```
 
-static int sender(char *buffer, int *size)
-{
-    return 0;
-}
+### MODO RASPBERRY
+Para o modo RASPBERRY a cada vez que o botão for pressionado irá alternar o estado do LED.
 
-static int receive(char *buffer, int size)
-{
-    printf("%s", buffer);
-    buffer[size - 1] = '\0';
-    for (int i = 0; i < (sizeof(command) / sizeof(command[0])); i++)
-    {
-        if (!strncmp(buffer, command[i].command, size))
-        {
-            command[i].setLed(command[i].state);
-            break;
-        }
-    }
-
-    return 0;
-}
-
-static void changeLed(int state)
-{
-    LED_set(&led, (eState_t)state);
-}
-
+## Matando os processos
+Para matar os processos criados execute o script kill_process.sh
+```bash
+$ cd bin
+$ ./kill_process.sh
 ```
 
 ## Conclusão
+Preencher
+
+## Referência
+* [Link do projeto completo](https://github.com/NakedSolidSnake/Raspberry_IPC_Socket_TCP)
+* [Mark Mitchell, Jeffrey Oldham, and Alex Samuel - Advanced Linux Programming](https://www.amazon.com.br/Advanced-Linux-Programming-CodeSourcery-LLC/dp/0735710430)
+* [fork, exec e daemon](https://github.com/NakedSolidSnake/Raspberry_fork_exec_daemon)
+* [biblioteca hardware](https://github.com/NakedSolidSnake/Raspberry_lib_hardware)
+
