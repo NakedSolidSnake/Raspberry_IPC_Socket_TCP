@@ -30,6 +30,13 @@ Até o momento nos referimos a IPC's que permite a comunicação entre processos
 
 ## TCP
 O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento desse IPC, ou seja, no sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
+O TCP é um protocolo orientado a conexão, para que a comunicação seja estabelecida entre os envolvidos é necessário estabelecer uma conexão TCP, que involve uma troca de dados inicial conhecido como handshake, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
+
+<p align="center">
+  <img src="./img/handshake.gif">
+</p>
+
+
 
 
 <p align="center">
