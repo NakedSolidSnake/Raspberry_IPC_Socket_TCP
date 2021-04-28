@@ -2,7 +2,7 @@
   <img src="https://i.ytimg.com/vi/ou8UVN7SG6s/maxresdefault.jpg">
 </p>
 
-# _TCP_
+# _Socket TCP_
 
 ## Tópicos
 * [Introdução](#introdução)
@@ -25,11 +25,127 @@
 * [Referência](#referência)
 
 ## Introdução
-Preencher
+Até o momento nos referimos a IPC's que permite a comunicação entre processos em uma mesma máquina, o que não é o caso de Socket. Sockets são um tipo de IPC muito especial, para não dizer o melhor, esse IPC permite a comunicação entre dois processos na mesma máquina, bem como a comunicação entre dois processos em máquinas diferentes atráves de uma rede, ou seja, dois processos rodando em computadores fisicamente separados. Um socket é um dispositivo de comunicação bidirecional, é possível tando enviar mensagens ou receber mensagens. FTP, Telnet, WWW,  Este IPC possui duas formas de comunicação(não irei mencionar as outras devido não serem tão utilizadas) conhecidas como TCP(Transmission Control Protocol) e UDP(User Datagram Protocol). Nesse artigo iremos abordar o TCP.
+
+
+## TCP
+O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento desse IPC, ou seja, no sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
+
+
+<p align="center">
+  <img src="./img/sockets.jpg">
+</p>
+
+
+## _System Calls utilizados no TCP_ 
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int socket(int domain, int type, int protocol);
+```
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int listen(int sockfd, int backlog);
+```
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+```
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+```
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+```
+
+```c
+#include <sys/socket.h>
+
+int shutdown(int sockfd, int how);
+```
+
+```c
+#include <unistd.h>
+
+int close(int fd);
+```
+
+## Criando um socket Servidor
+Para a criação de uma conexão para servidor é necessário seguir alguns passos:
+1. Criar um socket
+2. Realizar um bind com a porta especificada
+3. Iniciar a escuta de requisições de novas conexões
+4. Estabelecer a conexão 
+5. Realizar a comunicação entre o servidor e o cliente
+
+## Criando um socket Cliente
+Para a criação de uma conexão para cliente é necessário seguir alguns passos:
+1. Criar um socket
+2. Solicitar a conexão
+3. Realizar a comunicação entre o cliente e o servidor
+
+## Destruindo um socket Servidor/Cliente
+1. Interromper a troca de mensagens
+2. Relizar o fechamento do socket
+
+## Preparação do Ambiente
+Antes de apresentarmos o exemplo, primeiro precisaremos instalar algumas ferramentas para auxiliar na análise da comunicação. As ferramentas necessárias para esse artigo são o tcpdump e o netcat(nc), para instalá-los basta executar os comandos abaixo:
+
+```bash
+sudo apt-get update
+```
+
+```bash
+sudo apt-get install netcat
+```
+
+```bash
+sudo apt-get install tcpdump
+```
+
+## netcat
+O netcat é uma ferramenta capaz de interagir com conexões UDP e TCP, podendo abrir conexões, e ouvindo como um servidor, ou enviar mensanges para um servidor.
+
+## tcpdump
+O tcpdump é uma ferramenta capaz de monitorar o tráfego de dados em uma dada interface como por exemplo eth0, com ele é possível analisar os pacotes que são recebido e enviados.
+
+
+
 
 ## Implementação
 
-Para demonstrar o uso desse IPC, iremos utilizar o modelo Produtor/Consumidor, onde o processo Produtor(_button_process_) vai escrever seu estado interno no arquivo, e o Consumidor(_led_process_) vai ler o estado interno e vai aplicar o estado para si. Aplicação é composta por três executáveis sendo eles:
+Para demonstrar o uso desse IPC, iremos utilizar o modelo Cliente/Servidor, onde o processo Cliente(_button_process_) vai enviar uma mensagem com comandos pré-determinados, e o Servidor(_led_process_) vai ler as mensagens e verificar se possui o comando cadastrado, e vai executá-lo. Aplicação é composta por três executáveis sendo eles:
 * _launch_processes_ - é responsável por lançar os processos _button_process_ e _led_process_ atráves da combinação _fork_ e _exec_
 * _button_interface_ - é reponsável por ler o GPIO em modo de leitura da Raspberry Pi e escrever o estado interno no arquivo
 * _led_interface_ - é reponsável por ler do arquivo o estado interno do botão e aplicar em um GPIO configurado como saída
