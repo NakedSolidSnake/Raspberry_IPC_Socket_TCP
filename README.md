@@ -25,19 +25,19 @@
 * [Referência](#referência)
 
 ## Introdução
-Até o momento nos referimos a IPC's que permite a comunicação entre processos em uma mesma máquina, o que não é o caso de Socket. Sockets são um tipo de IPC muito especial, para não dizer o melhor, esse IPC permite a comunicação entre dois processos na mesma máquina, bem como a comunicação entre dois processos em máquinas diferentes atráves de uma rede, ou seja, dois processos rodando em computadores fisicamente separados. Um socket é um dispositivo de comunicação bidirecional, é possível tando enviar mensagens ou receber mensagens. FTP, Telnet, WWW,  Este IPC possui duas formas de comunicação(não irei mencionar as outras devido não serem tão utilizadas) conhecidas como TCP(Transmission Control Protocol) e UDP(User Datagram Protocol). Nesse artigo iremos abordar o TCP.
+Até o momento nos referimos a IPC's que permite a comunicação entre processos em uma mesma máquina, o que não é o caso de Socket. Sockets são um tipo de IPC muito especial, para não dizer o melhor, esse IPC permite a comunicação entre dois processos na mesma máquina, bem como a comunicação entre dois processos em máquinas diferentes atráves de uma rede, ou seja, dois processos rodando em computadores fisicamente separados. Um socket é um dispositivo de comunicação bidirecional, é possível tando enviar mensagens ou receber mensagens. Este IPC possui duas formas de comunicação(não irei mencionar as outras devido não serem tão utilizadas) conhecidas como TCP(Transmission Control Protocol) e UDP(User Datagram Protocol). Nesse artigo iremos abordar o TCP.
 
 
 ## TCP
-O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento desse IPC, ou seja, no sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
-O TCP é um protocolo orientado a conexão, para que a comunicação seja estabelecida entre os envolvidos é necessário estabelecer uma conexão TCP, que involve uma troca de dados inicial conhecido como handshake, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
+O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento desse IPC, ou seja, na sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
+O TCP é considerado um protocolo confiável, pois provê garantia de entrega das mensagens, e de forma ordenada, sendo ele um protocolo orientado a conexão, 
+necessita de uma troca de dados iniciais entre os envolvidos para estabelecer uma conexão TCP, conhecido como _handshake_, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
 
 <p align="center">
   <img src="./img/handshake.gif">
 </p>
 
-
-
+O TCP permite conexões entre processos em máquinas distintas, dessa forma podemos atribuir funções para cada uma dessas máquinas, caracterizando uma aplicação distribuída, onde cada uma dessas máquinas possui uma responsabilidade dentro da aplicação. A figura abaixo demonstra a conexão entre duas máquinas:
 
 <p align="center">
   <img src="./img/sockets.png">
