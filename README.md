@@ -33,7 +33,7 @@ O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcioname
 
 
 <p align="center">
-  <img src="./img/sockets.jpg">
+  <img src="./img/sockets.png">
 </p>
 
 
