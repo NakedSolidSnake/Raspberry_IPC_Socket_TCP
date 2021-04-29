@@ -25,13 +25,12 @@
 * [Referência](#referência)
 
 ## Introdução
-Até o momento nos referimos a IPC's que permite a comunicação entre processos em uma mesma máquina, o que não é o caso de Socket. Sockets são um tipo de IPC muito especial, para não dizer o melhor, esse IPC permite a comunicação entre dois processos na mesma máquina, bem como a comunicação entre dois processos em máquinas diferentes atráves de uma rede, ou seja, dois processos rodando em computadores fisicamente separados. Um socket é um dispositivo de comunicação bidirecional, é possível tando enviar mensagens ou receber mensagens. Este IPC possui duas formas de comunicação(não irei mencionar as outras devido não serem tão utilizadas) conhecidas como TCP(Transmission Control Protocol) e UDP(User Datagram Protocol). Nesse artigo iremos abordar o TCP.
+Até o momento nos referimos a IPC's que permite a comunicação entre processos em uma mesma máquina, o que não é o caso de _socket_. _Sockets_ é um tipo de IPC muito especial, para não dizer o melhor, esse IPC permite a comunicação entre dois processos na mesma máquina, bem como a comunicação entre dois processos em máquinas diferentes atráves de uma rede, ou seja, dois processos rodando em computadores fisicamente separados. Um socket é um dispositivo de comunicação bidirecional, sendo possível enviar e receber mensagens. Para entender de forma fácil o que seria o _socket_, é fazer uma analogia com uma ligação telefônica, você deseja ligar para uma determinado número, então disca esse número e quando a conexão é estabelecida começa a tocar no telefone na outra ponta, a pessoa atende e começam a conversar, o mesmo ocorre para o _socket_, porém ao invés de usar número usamos IP e porta para estabelecer a comunicação. Este IPC possui duas formas de comunicação(não irei mencionar as outras devido não serem tão utilizadas) conhecidas como TCP(Transmission Control Protocol) nesse caso as mensagens são enviadas na forma de _stream_ de mensagens, e UDP(User Datagram Protocol) onde as mensagens são enviadas em blocos de mensagens. Nesse artigo iremos abordar o TCP.
 
 
 ## TCP
 O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento desse IPC, ou seja, na sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
-O TCP é considerado um protocolo confiável, pois provê garantia de entrega das mensagens, e de forma ordenada, sendo ele um protocolo orientado a conexão, 
-necessita de uma troca de dados iniciais entre os envolvidos para estabelecer uma conexão TCP, conhecido como _handshake_, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
+O TCP é considerado um protocolo confiável, pois provê garantia de entrega das mensagens, e de forma ordenada, roda sobre o protocolo IP, e sendo ele um protocolo orientado a conexão, necessita de uma troca de dados iniciais entre os envolvidos para estabelecer uma conexão TCP, conhecido como _handshake_, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
 
 <p align="center">
   <img src="./img/handshake.gif">
@@ -46,6 +45,10 @@ O TCP permite conexões entre processos em máquinas distintas, dessa forma pode
 
 ## _System Calls utilizados no TCP_ 
 
+Para criar uma aplicação utilizando TCP utilizamos com conjunto bem específico de funções, sendo elas descritas a seguir:
+
+
+Cria um endpoint para estabelecer uma comunicação,
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -53,6 +56,7 @@ O TCP permite conexões entre processos em máquinas distintas, dessa forma pode
 int socket(int domain, int type, int protocol);
 ```
 
+Faz a junção da porta com o socket
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -60,6 +64,7 @@ int socket(int domain, int type, int protocol);
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 ```
 
+Entra no modo de escuta, aguardando conexões
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -67,6 +72,7 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 int listen(int sockfd, int backlog);
 ```
 
+Quando uma conexão é requisitada realiza a aceitação, estabelecendo a conexão
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -75,6 +81,7 @@ int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 
 ```
 
+Solicita uma comunicação
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -82,6 +89,7 @@ int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 ```
 
+Com a conexão estabelecida, permite o envio de mensagens para o endpoint receptor
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -89,6 +97,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 ```
 
+Com a conexão estabelecida, permite receber mensagens do endpoint emissor
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -96,12 +105,14 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 ```
 
+Solicita o fim de recepção de novas mensagens
 ```c
 #include <sys/socket.h>
 
 int shutdown(int sockfd, int how);
 ```
 
+Destroí o socket
 ```c
 #include <unistd.h>
 
