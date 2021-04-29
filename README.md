@@ -42,13 +42,20 @@ O TCP permite conexões entre processos em máquinas distintas, dessa forma pode
   <img src="./img/sockets.png">
 </p>
 
+Normalmente a arquitetuta mais empregada para esse protocolo é o Cliente/Servidor
+
+## Conceito de Servidor
+Pela definição do dicionário servidor é um computador que disponibiliza informação e serviços a outros computadores ligados em rede, dessa forma sempre deve estar disponível, para que quando desejado o acesso a ele sempre seja possível.
+
+## Conceito de Cliente
+
 
 ## _System Calls utilizados no TCP_ 
 
 Para criar uma aplicação utilizando TCP utilizamos com conjunto bem específico de funções, sendo elas descritas a seguir:
 
 
-Cria um endpoint para estabelecer uma comunicação,
+Cria um endpoint para estabelecer uma comunicação
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -135,7 +142,7 @@ Para a criação de uma conexão para cliente é necessário seguir alguns passo
 
 ## Destruindo um socket Servidor/Cliente
 1. Interromper a troca de mensagens
-2. Relizar o fechamento do socket
+2. Realizar o fechamento do socket
 
 ## Preparação do Ambiente
 Antes de apresentarmos o exemplo, primeiro precisaremos instalar algumas ferramentas para auxiliar na análise da comunicação. As ferramentas necessárias para esse artigo são o tcpdump e o netcat(nc), para instalá-los basta executar os comandos abaixo:
@@ -159,14 +166,91 @@ O netcat é uma ferramenta capaz de interagir com conexões UDP e TCP, podendo a
 O tcpdump é uma ferramenta capaz de monitorar o tráfego de dados em uma dada interface como por exemplo eth0, com ele é possível analisar os pacotes que são recebido e enviados.
 
 
-
-
 ## Implementação
 
-Para demonstrar o uso desse IPC, iremos utilizar o modelo Cliente/Servidor, onde o processo Cliente(_button_process_) vai enviar uma mensagem com comandos pré-determinados, e o Servidor(_led_process_) vai ler as mensagens e verificar se possui o comando cadastrado, e vai executá-lo. Aplicação é composta por três executáveis sendo eles:
+Para demonstrar o uso desse IPC, iremos utilizar o modelo Cliente/Servidor, onde o processo Cliente(_button_process_) vai enviar uma mensagem com comandos pré-determinados para o servidor, e o Servidor(_led_process_) vai ler as mensagens e verificar se possui o comando cadastrado, assim o executando.
+Para melhor isolar as implementações do servidor e do cliente foi criado uma biblioteca, que abstrai a rotina de inicialização e execução do servidor, e a rotina de conexão por parte do cliente.
+
+### Biblioteca
+A biblioteca criada permite uma fácil criação do servidor, sendo o servidor orientado a eventos, ou seja, fica aguardando as mensagens chegarem.
+
+#### tcp_server.h
+
+Primeiramente criamos uma interface resposável por eventos de envio e recebimento, essa funções serão chamadas quando esses eventos ocorrerem.
+
+```c
+typedef struct 
+{
+    int (*on_send)(char *buffer, int *size, void *user_data);  
+    int (*on_receive)(char *buffer, int size, void *user_data);
+} TCP_Server_Callback_t;
+```
+
+Criamos também um contexto que armazena os paramêtros utilizados pelo servidor, sendo o _socket_ para armazenar a instância criada, _port_ que recebe o número que corresponde onde o serviço será disponibilizado, _buffer_ que aponta para a memória alocada previamente pelo usuário, *buffer_size* o representa o tamanho do _buffer_ e a interface das funções de _callback_
+
+```c
+typedef struct
+{
+    int socket;
+    int port;
+    char *buffer;
+    int buffer_size;
+    TCP_Server_Callback_t cb;
+} TCP_Server_t;
+```
+
+Essa função realiza os passos de 1 a 3 previamente descritos, para a inicilização do servidor
+```c
+bool TCP_Server_Init(TCP_Server_t *server);
+```
+
+Essa função aguarda uma conexão e realiza a comunicação com o cliente.
+```c
+bool TCP_Server_Exec(TCP_Server_t *server, void *data);
+```
+#### tcp_server.c
+
+```c
+```
+```c
+```
+```c
+```
+```c
+```
+```c
+```
+#### tcp_client.h
+
+```c
+```
+```c
+```
+```c
+```
+```c
+```
+```c
+```
+#### tcp_client.c
+```c
+```
+```c
+```
+```c
+```
+```c
+```
+```c
+```
+
+
+
+
+ A aplicação é composta por três executáveis sendo eles:
 * _launch_processes_ - é responsável por lançar os processos _button_process_ e _led_process_ atráves da combinação _fork_ e _exec_
-* _button_interface_ - é reponsável por ler o GPIO em modo de leitura da Raspberry Pi e escrever o estado interno no arquivo
-* _led_interface_ - é reponsável por ler do arquivo o estado interno do botão e aplicar em um GPIO configurado como saída
+* _button_interface_ - é reponsável por ler o GPIO em modo de leitura da Raspberry Pi e se conectar ao servidor para enviar uma mensagem de alteração de estado.
+* _led_interface_ - é reponsável por escutar novas conexões, recebendo comandos para aplicar em um GPIO configurado como saída
 
 ### *launch_processes*
 
@@ -271,7 +355,7 @@ Dessa forma o terminal irá apresentar somente os LOG's referente ao exemplo.
 
 Para simular o botão, o processo em modo PC cria uma FIFO para permitir enviar comandos para a aplicação, dessa forma todas as vezes que for enviado o número 0 irá logar no terminal onde foi configurado para o monitoramento, segue o exemplo
 ```bash
-echo "0" > /tmp/signal_file
+echo "0" > /tmp/tcp_file
 ```
 
 Output do LOG quando enviado o comando algumas vezez
