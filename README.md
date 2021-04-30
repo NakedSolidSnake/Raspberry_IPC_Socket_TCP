@@ -262,6 +262,46 @@ if(is_valid < 0)
 status = true;
 ```
 
+Na função TCP_Server_Exec declaramos algumas variáveis para realizar a 
+
+```c
+struct sockaddr_in address;
+socklen_t addr_len = sizeof(address);
+int client_socket;
+size_t read_len;
+int write_len;    
+bool status = false;
+```
+
+```c
+client_socket = accept(server->socket, (struct sockaddr *)&address, &addr_len);
+if(client_socket > 0)
+```
+
+```c
+read_len = recv(client_socket, server->buffer, server->buffer_size, 0);
+if(server->cb.on_receive)
+{
+    server->cb.on_receive(server->buffer, read_len, data);
+}
+```
+
+```c
+if(server->cb.on_send)
+{
+    server->cb.on_send(server->buffer, &write_len, data);
+    send(client_socket, server->buffer, (int)fmin(write_len, server->buffer_size), 0);
+}
+
+status = true;
+``` 
+
+```c
+shutdown(client_socket, SHUT_RDWR);
+close(client_socket);
+``` 
+
+
 #### tcp_client.h
 Criamos também um contexto que armazena os paramêtros utilizados pelo cliente, sendo o _socket_ para armazenar a instância criada, _hostname_ é o ip que da máquina que vai ser conectar, _port_ que recebe o número que corresponde qual o serviço deseja consumir, _buffer_ que aponta para a memória alocada previamente pelo usuário, *buffer_size* o representa o tamanho do _buffer_ e a interface das funções de _callback_
 
@@ -341,11 +381,6 @@ close(client->socket);
 return status;
 ```
 
-
-
-
-
-
  A aplicação é composta por três executáveis sendo eles:
 * _launch_processes_ - é responsável por lançar os processos _button_process_ e _led_process_ atráves da combinação _fork_ e _exec_
 * _button_interface_ - é reponsável por ler o GPIO em modo de leitura da Raspberry Pi e se conectar ao servidor para enviar uma mensagem de alteração de estado.
@@ -389,9 +424,91 @@ if(pid_led == 0)
 ```
 
 ### *button_interface*
-descrever o código
+```c
+bool Button_Run(TCP_Client_t *client, Button_Data *button)
+{
+    static int state = 0;
+
+    if(button->interface->Init(button->object) == false)
+        return false;
+
+    while(true)
+    {
+        wait_press(button);
+        TCP_Client_Connect(client, &state);
+    }
+}
+```
+
 ### *led_interface*
-descrever o código
+```c
+bool LED_Run(TCP_Server_t *server, LED_Data *led)
+{
+    if(led->interface->Init(led->object) == false)
+        return false;
+
+    TCP_Server_Init(server);
+
+    while(true)
+    {
+        TCP_Server_Exec(server, led);
+    }
+
+    return false;
+}
+```
+
+### *button_process*
+```c
+TCP_Client_t client = 
+{
+    .buffer = client_buffer,
+    .buffer_size = BUFFER_SIZE,
+    .hostname = "127.0.0.1",
+    .port = 5555,
+    .cb.on_send = on_send        
+};
+
+Button_Run(&client, &button);
+```
+
+```c
+static int on_send(char *buffer, int *size, void *data)
+{
+    int *state = (int *)data;
+    snprintf(buffer, strlen(states[*state]) + 1, "%s",states[*state]);
+    *size = strlen(states[*state]) + 1;
+
+    return 0;
+}
+```
+
+### *led_process*
+```c
+ TCP_Server_t server = 
+    {
+        .port = 5555,
+        .buffer = server_buffer,
+        .buffer_size = sizeof(server_buffer),
+        .cb.on_receive = on_receive_message
+    };
+
+    LED_Run(&server, &data);
+```
+
+```c
+static int on_receive_message(char *buffer, int size, void *user_data)
+{
+    LED_Data *led = (LED_Data *)user_data;
+
+    if(strncmp("LED ON", buffer, strlen("LED ON")) == 0)
+        led->interface->Set(led->object, 1);
+    else if(strncmp("LED OFF", buffer, strlen("LED OFF")) == 0)
+        led->interface->Set(led->object, 0);
+
+    return 0;
+}
+```
 
 ## Compilando, Executando e Matando os processos
 Para compilar e testar o projeto é necessário instalar a biblioteca de [hardware](https://github.com/NakedSolidSnake/Raspberry_lib_hardware) necessária para resolver as dependências de configuração de GPIO da Raspberry Pi.
@@ -469,6 +586,10 @@ Apr  6 06:22:42 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
 
 ### MODO RASPBERRY
 Para o modo RASPBERRY a cada vez que o botão for pressionado irá alternar o estado do LED.
+
+## Monitorando o tráfego usando o tcpdump
+
+## Testando conexão com o servidor via netcat
 
 ## Matando os processos
 Para matar os processos criados execute o script kill_process.sh
