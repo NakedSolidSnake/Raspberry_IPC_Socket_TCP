@@ -584,8 +584,8 @@ $ ps -ef | grep _process
 
 O output 
 ```bash
-pi        2773     1  0 10:25 pts/0    00:00:00 led_process
-pi        2774     1  1 10:25 pts/0    00:00:00 button_process 2773
+cssouza  11492  1364  0 13:59 pts/0    00:00:00 ./button_process
+cssouza  11493  1364  0 13:59 pts/0    00:00:00 ./led_process
 ```
 ## Interagindo com o exemplo
 Dependendo do modo de compilação selecionado a interação com o exemplo acontece de forma diferente
@@ -605,20 +605,93 @@ echo "0" > /tmp/tcp_file
 
 Output do LOG quando enviado o comando algumas vezez
 ```bash
-Apr  6 06:22:37 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: On
-Apr  6 06:22:39 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
-Apr  6 06:22:40 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: On
-Apr  6 06:22:40 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
-Apr  6 06:22:41 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: On
-Apr  6 06:22:42 cssouza-Latitude-5490 LED SIGNAL[4277]: LED Status: Off
+Apr 30 14:01:12 dell-cssouza LED TCP[11493]: LED Status: On
+Apr 30 14:01:13 dell-cssouza LED TCP[11493]: LED Status: Off
+Apr 30 14:01:13 dell-cssouza LED TCP[11493]: LED Status: On
+Apr 30 14:01:14 dell-cssouza LED TCP[11493]: LED Status: Off
+Apr 30 14:01:14 dell-cssouza LED TCP[11493]: LED Status: On
+Apr 30 14:01:19 dell-cssouza LED TCP[11493]: LED Status: Off
 ```
 
 ### MODO RASPBERRY
 Para o modo RASPBERRY a cada vez que o botão for pressionado irá alternar o estado do LED.
 
 ## Monitorando o tráfego usando o tcpdump
+Para monitorar as mensagens que trafegam, precisamos ler uma interface, para saber quais interfaces que o computador possui usamos o comando 
+```bash
+$ ip a
+```
+Output
+```bash
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp0s31f6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 10:65:30:22:8a:1a brd ff:ff:ff:ff:ff:ff
+    inet 10.0.0.100/24 brd 10.0.0.255 scope global dynamic noprefixroute enp0s31f6
+       valid_lft 17064sec preferred_lft 17064sec
+    inet6 fe80::3b0:2187:f4da:d8cd/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+3: wlp2s0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default qlen 1000
+    link/ether 7c:2a:31:df:f0:02 brd ff:ff:ff:ff:ff:ff
+4: vboxnet0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 0a:00:27:00:00:00 brd ff:ff:ff:ff:ff:ff
+    inet 172.16.11.100/24 brd 172.16.11.255 scope global vboxnet0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::800:27ff:fe00:0/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
+Como podemos ver temos 4 interfaces no computar onde o comando foi executado, pode ser que a máquina que esteja usando possa ter mais interfaces ou menos interfaces. Para teste local, iremos usar a interface local denominada lo
+
+O tcpdump possui opções que permite a visualização dos dados, não irei explicar tudo, fica de estudo para quem quiser saber mais sobre o protocolo TCP. Executando o comando:
+```bash
+sudo tcpdump -i lo -nnSX port 5555
+```
+Após executar o comando o tcpdump ficará fazendo sniffing da conexão, dessa forma enviamos um comando e veremos a seguinte saída:
+
+```bash
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on lo, link-type EN10MB (Ethernet), capture size 262144 bytes
+14:03:45.435884 IP 127.0.0.1.44800 > 127.0.0.1.5555: Flags [S], seq 2553339266, win 65495, options [mss 65495,sackOK,TS val 3435397926 ecr 0,nop,wscale 7], length 0
+	0x0000:  4500 003c 11f5 4000 4006 2ac5 7f00 0001  E..<..@.@.*.....
+	0x0010:  7f00 0001 af00 15b3 9830 dd82 0000 0000  .........0......
+	0x0020:  a002 ffd7 fe30 0000 0204 ffd7 0402 080a  .....0..........
+	0x0030:  ccc4 0326 0000 0000 0103 0307            ...&........
+14:03:45.435898 IP 127.0.0.1.5555 > 127.0.0.1.44800: Flags [S.], seq 463681437, ack 2553339267, win 65483, options [mss 65495,sackOK,TS val 3435397926 ecr 3435397926,nop,wscale 7], length 0
+	0x0000:  4500 003c 0000 4000 4006 3cba 7f00 0001  E..<..@.@.<.....
+	0x0010:  7f00 0001 15b3 af00 1ba3 379d 9830 dd83  ..........7..0..
+	0x0020:  a012 ffcb fe30 0000 0204 ffd7 0402 080a  .....0..........
+	0x0030:  ccc4 0326 ccc4 0326 0103 0307            ...&...&....
+14:03:45.435911 IP 127.0.0.1.44800 > 127.0.0.1.5555: Flags [.], ack 463681438, win 512, options [nop,nop,TS val 3435397926 ecr 3435397926], length 0
+	0x0000:  4500 0034 11f6 4000 4006 2acc 7f00 0001  E..4..@.@.*.....
+	0x0010:  7f00 0001 af00 15b3 9830 dd83 1ba3 379e  .........0....7.
+	0x0020:  8010 0200 fe28 0000 0101 080a ccc4 0326  .....(.........&
+	0x0030:  ccc4 0326                                ...&
+14:03:45.435937 IP 127.0.0.1.44800 > 127.0.0.1.5555: Flags [P.], seq 2553339267:2553339275, ack 463681438, win 512, options [nop,nop,TS val 3435397926 ecr 3435397926], length 8
+	0x0000:  4500 003c 11f7 4000 4006 2ac3 7f00 0001  E..<..@.@.*.....
+	0x0010:  7f00 0001 af00 15b3 9830 dd83 1ba3 379e  .........0....7.
+	0x0020:  8018 0200 fe30 0000 0101 080a ccc4 0326  .....0.........&
+	0x0030:  ccc4 0326 4c45 4420 4f46 4600            ...&LED.OFF.
+```
+
+Podemos ver claramente que há o handshake, no instante 14:03:45.435884 IP 127.0.0.1.44800 > 127.0.0.1.5555, o cliente envia uma SYN para o server, no instante 14:03:45.435898 IP 127.0.0.1.5555 > 127.0.0.1.44800, o servidor responde com um SYN ACK, no instante 14:03:45.435911 IP 127.0.0.1.44800 > 127.0.0.1.5555, o cliente envia um ACK para o servidor e por fim o cliente envia a mensagem podendo ser vista no fim da ultima mensagem LED.OFF.
 
 ## Testando conexão com o servidor via netcat
+A aplicação realiza a comunicação entre processos locais, para testar uma comunicação remota usaremos o netcat que permite se conectar de forma prática ao servidor e enviar os comandos. Para se conectar basta usar o seguinte comando:
+
+```bash
+$ nc ip port
+```
+
+Como descrito no comando ip usaremos o ip apresentado na interface enp0s31f6 que é o IP 10.0.0.100, então o comando fica
+```bash
+$ nc 10.0.0.100 5555
+```
+E enviamos o comando LED ON, se visualizar no log irá apresentar que o comando foi executado
 
 ## Matando os processos
 Para matar os processos criados execute o script kill_process.sh
@@ -628,7 +701,7 @@ $ ./kill_process.sh
 ```
 
 ## Conclusão
-Preencher
+Esse sem dúvida é o melhor IPC, pois permite a comunicação entre processos na mesma máquina e em máquinas fisicamente separadas, também é possível se comunicar com outras tecnologias, baseado em um protocolo padrão, além disso, permite outras utilizades como comunicação entre threads para evitar concorrências, criação de padrões arquiteturais como cliente/servidor utilizado nessa aplicação, bem como o a criação do Zeromq, porém toda essa facilidade, geramos um grande problema quando precisamos trafegar os dados em uma rede pública, quando feito dessa forma estamos expondo os nossos dados, como visto no tcpdump, mas existe uma forma de protegê-los. 
 
 ## Referência
 * [Link do projeto completo](https://github.com/NakedSolidSnake/Raspberry_IPC_Socket_TCP)
