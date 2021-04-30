@@ -36,7 +36,7 @@ O TCP é considerado um protocolo confiável, pois provê garantia de entrega da
   <img src="./img/handshake.gif">
 </p>
 
-O TCP permite conexões entre processos em máquinas distintas, dessa forma podemos atribuir funções para cada uma dessas máquinas, caracterizando uma aplicação distribuída, onde cada uma dessas máquinas possui uma responsabilidade dentro da aplicação. A figura abaixo demonstra a conexão entre duas máquinas:
+O TCP permite conexões entre processos em máquinas distintas, dessa forma podemos atribuir funções para cada uma dessas máquinas, caracterizando uma aplicação distribuída, onde cada possui uma responsabilidade dentro da aplicação. A figura abaixo demonstra a conexão entre duas máquinas:
 
 <p align="center">
   <img src="./img/sockets.png">
@@ -44,11 +44,11 @@ O TCP permite conexões entre processos em máquinas distintas, dessa forma pode
 
 Normalmente a arquitetuta mais empregada para esse protocolo é o Cliente/Servidor
 
-## Conceito de Servidor
+## Conceito de servidor
 Pela definição do dicionário servidor é um computador que disponibiliza informação e serviços a outros computadores ligados em rede, dessa forma sempre deve estar disponível, para que quando desejado o acesso a ele sempre seja possível.
 
-## Conceito de Cliente
-
+## Conceito de cliente
+Cliente é um computador que consome os serviços e informações de um servidor, podendo ser interno ou pela rede de computadores
 
 ## _System Calls utilizados no TCP_ 
 
@@ -174,8 +174,7 @@ Para melhor isolar as implementações do servidor e do cliente foi criado uma b
 ### Biblioteca
 A biblioteca criada permite uma fácil criação do servidor, sendo o servidor orientado a eventos, ou seja, fica aguardando as mensagens chegarem.
 
-#### tcp_server.h
-
+#### tcp_interface.h
 Primeiramente criamos uma interface resposável por eventos de envio e recebimento, essa funções serão chamadas quando esses eventos ocorrerem.
 
 ```c
@@ -183,8 +182,10 @@ typedef struct
 {
     int (*on_send)(char *buffer, int *size, void *user_data);  
     int (*on_receive)(char *buffer, int size, void *user_data);
-} TCP_Server_Callback_t;
+} TCP_Callback_t;
 ```
+
+#### tcp_server.h
 
 Criamos também um contexto que armazena os paramêtros utilizados pelo servidor, sendo o _socket_ para armazenar a instância criada, _port_ que recebe o número que corresponde onde o serviço será disponibilizado, _buffer_ que aponta para a memória alocada previamente pelo usuário, *buffer_size* o representa o tamanho do _buffer_ e a interface das funções de _callback_
 
@@ -195,7 +196,7 @@ typedef struct
     int port;
     char *buffer;
     int buffer_size;
-    TCP_Server_Callback_t cb;
+    TCP_Callback_t cb;
 } TCP_Server_t;
 ```
 
@@ -210,57 +211,57 @@ bool TCP_Server_Exec(TCP_Server_t *server, void *data);
 ```
 #### tcp_server.c
 
-No TCP_Server_Init criamos 
+No TCP_Server_Init definimos algumas váriaveis para auxiliar na inicialização do servidor, sendo uma variável booleana que representa o estado da inicialização do servidor, uma variável do tipo inteiro que recebe o resultado das funções necessárias para a configuração, uma variável do tipo inteiro para habilitar o reuso da porta caso o servidor precise reiniciar e um estrutura sockaddr_in que é usada para configurar o servidor para se comunicar através da rede.
 ```c
-bool TCP_Server_Init(TCP_Server_t *server)
-{
-    bool status = false;
-    int is_valid;
-    int enable_reuse = 1;
-    struct sockaddr_in address;
-
-    do 
-    {
-        if(!server || !server->buffer)
-            break;
-
-        server->socket = socket(AF_INET, SOCK_STREAM, 0);
-        if(server->socket < 0)
-            break;
-
-        is_valid = setsockopt(server->socket, SOL_SOCKET, SO_REUSEADDR, (void *)&enable_reuse, sizeof(enable_reuse));
-        if(is_valid < 0)
-            break;
-
-        memset(&address, 0, sizeof(address));
-
-        address.sin_family = AF_INET;
-        address.sin_addr.s_addr = htonl(INADDR_ANY);
-        address.sin_port = htons(server->port);        
-
-        is_valid = bind(server->socket, (struct sockaddr *)&address, sizeof(address));
-        if(is_valid != 0)
-            break;
-
-        is_valid = listen(server->socket, 1);
-        if(is_valid < 0)
-            break;
-
-        status = true;
-
-    }while(false);
-
-    return status;
-}
+bool status = false;
+int is_valid;
+int enable_reuse = 1;
+struct sockaddr_in address;
 ```
+Para realizar a inicialização é criado um dummy do while, para que quando houver falha em qualquer uma das etapas sair da função com status de erro, nesse ponto verificamos se o contexto e o buffer foi inicializado, que é de reponsabilidade do usuário
+
 ```c
+if(!server || !server->buffer)
+    break;
 ```
+Criamos um endpoint com o perfil de se conectar via protocolo IPv4(AF_INET), do tipo stream que caracteriza o TCP(SOCK_STREAM), o último parâmetro pode ser 0 nesse caso.
 ```c
+server->socket = socket(AF_INET, SOCK_STREAM, 0);
+if(server->socket < 0)
+    break;
 ```
+Aqui permitimos o reuso do socket caso necessite reiniciar o serviço
 ```c
+is_valid = setsockopt(server->socket, SOL_SOCKET, SO_REUSEADDR, (void *)&enable_reuse, sizeof(enable_reuse));
+if(is_valid < 0)
+    break;
 ```
+
+Preenchemos a estrutura com parâmetros fornecidos pelo usuário como em qual porta que o serviço vai rodar.
 ```c
+memset(&address, 0, sizeof(address));
+
+address.sin_family = AF_INET;
+address.sin_addr.s_addr = htonl(INADDR_ANY);
+address.sin_port = htons(server->port);
 ```
+
+Aplicamos as configurações ao socket criado
+```c
+is_valid = bind(server->socket, (struct sockaddr *)&address, sizeof(address));
+if(is_valid != 0)
+    break;
+```
+
+Por fim colocamos o socket para escutar novas conexões
+```c
+is_valid = listen(server->socket, 1);
+if(is_valid < 0)
+    break;
+
+status = true;
+```
+
 #### tcp_client.h
 
 ```c

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7.0)
 
-project(UDP)
+project(TCP)
 
 set (CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -std=c99")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
