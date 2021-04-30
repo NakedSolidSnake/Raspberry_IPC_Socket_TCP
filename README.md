@@ -210,7 +210,48 @@ bool TCP_Server_Exec(TCP_Server_t *server, void *data);
 ```
 #### tcp_server.c
 
+No TCP_Server_Init criamos 
 ```c
+bool TCP_Server_Init(TCP_Server_t *server)
+{
+    bool status = false;
+    int is_valid;
+    int enable_reuse = 1;
+    struct sockaddr_in address;
+
+    do 
+    {
+        if(!server || !server->buffer)
+            break;
+
+        server->socket = socket(AF_INET, SOCK_STREAM, 0);
+        if(server->socket < 0)
+            break;
+
+        is_valid = setsockopt(server->socket, SOL_SOCKET, SO_REUSEADDR, (void *)&enable_reuse, sizeof(enable_reuse));
+        if(is_valid < 0)
+            break;
+
+        memset(&address, 0, sizeof(address));
+
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_ANY);
+        address.sin_port = htons(server->port);        
+
+        is_valid = bind(server->socket, (struct sockaddr *)&address, sizeof(address));
+        if(is_valid != 0)
+            break;
+
+        is_valid = listen(server->socket, 1);
+        if(is_valid < 0)
+            break;
+
+        status = true;
+
+    }while(false);
+
+    return status;
+}
 ```
 ```c
 ```
