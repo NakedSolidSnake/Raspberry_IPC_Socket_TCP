@@ -262,7 +262,7 @@ if(is_valid < 0)
 status = true;
 ```
 
-Na função TCP_Server_Exec declaramos algumas variáveis para realizar a 
+Na função TCP_Server_Exec declaramos algumas variáveis para realizar a conexão e comunicação com o cliente
 
 ```c
 struct sockaddr_in address;
@@ -273,11 +273,13 @@ int write_len;
 bool status = false;
 ```
 
+Quando a conexão é solicitada por parte do cliente, o accept retorna o socket referente a conexão, caso for feita com sucesso
 ```c
 client_socket = accept(server->socket, (struct sockaddr *)&address, &addr_len);
 if(client_socket > 0)
 ```
 
+O Servidor aguarda a troca de mensagem, assim que receber realiza a verificação se o callback para recebimento foi preenchido caso sim, passa o conteúdo para o callback realizar o tratamento.
 ```c
 read_len = recv(client_socket, server->buffer, server->buffer_size, 0);
 if(server->cb.on_receive)
@@ -285,7 +287,7 @@ if(server->cb.on_receive)
     server->cb.on_receive(server->buffer, read_len, data);
 }
 ```
-
+Aqui é verificado se o callback para envio foi configurado, dessa forma o buffer e passado para que a implementação prepare a mensagem a ser enviada, e alteramos o status para true, que a comunicação foi feita com sucesso.
 ```c
 if(server->cb.on_send)
 {
@@ -296,11 +298,11 @@ if(server->cb.on_send)
 status = true;
 ``` 
 
+Interrompemos qualquer nova transação e fechamos o socket usando, concluindo a comunicação
 ```c
 shutdown(client_socket, SHUT_RDWR);
 close(client_socket);
 ``` 
-
 
 #### tcp_client.h
 Criamos também um contexto que armazena os paramêtros utilizados pelo cliente, sendo o _socket_ para armazenar a instância criada, _hostname_ é o ip que da máquina que vai ser conectar, _port_ que recebe o número que corresponde qual o serviço deseja consumir, _buffer_ que aponta para a memória alocada previamente pelo usuário, *buffer_size* o representa o tamanho do _buffer_ e a interface das funções de _callback_
@@ -323,6 +325,7 @@ bool TCP_Client_Connect(TCP_Client_t *client, void *data);
 ```
 
 #### tcp_client.c
+Na função TCP_Client_Connect definimos algumas váriaveis para auxiliar na comunicação com o servidor, sendo uma variável booleana que representa o estado da parametrização do cliente, uma variável do tipo inteiro que recebe o resultado das funções necessárias para a configuração, uma estrutura sockaddr_in que é usada para configurar o servidor no qual será conectado, e duas variáveis de quantidade de dados enviados e recebidos.
 
 ```c
 bool status = false;
@@ -331,27 +334,32 @@ struct sockaddr_in server;
 int send_size;
 int recv_size;
 ```
-
+Verificamos se o contexto do cliente, e o buffer estão inicializados
 ```c
 if(!client || !client->buffer || client->buffer_size <= 0)
     break;
 ```
+
+Criamos um endpoint com o perfil de se conectar via protocolo IPv4(AF_INET), do tipo stream que caracteriza o TCP(SOCK_STREAM), o último parâmetro pode ser 0 nesse caso.
 ```c
 client->socket = socket(AF_INET, SOCK_STREAM, 0);
 if(client->socket < 0)
     break;
 
 ```
+Preenchemos a estrutura com o parâmetros pertinentes ao servidor
 ```c
 server.sin_family = AF_INET;
 server.sin_port = htons(client->port);
 ```
+
+Convertemos o hostname para o endereço relativo ao servidor
 ```c
 is_valid = inet_pton(AF_INET, client->hostname, &server.sin_addr);
 if(is_valid <= 0)
     break;
 ```
-
+Solicitamos a conexão com o servidor previamente configurado, caso ocorra tudo de forma correta alteramos o status para verdadeiro
 ```c
 is_valid = connect(client->socket, (struct sockaddr *)&server, sizeof(server));
 if(is_valid < 0)
@@ -360,13 +368,17 @@ if(is_valid < 0)
 status = true;
 ```
 
+Aqui verificamos se a inicialização ocorreu com sucesso e se o callback para envio foi preenchido
 ```c
 if( status && client->cb.on_send)
 ```
+Em caso de sucesso passamos o contexto para a implementação feita pelo usuário para preparar o dados a ser enviado para o servidor
 ```c
 client->cb.on_send(client->buffer, &send_size, data);
 send(client->socket, client->buffer, (int)fmin(send_size, client->buffer_size), 0);
 ```
+
+Se o callback para o recebimento foi preenchido passamos o contexto para a implementação do usuário tratar a resposta
 ```c
 if(client->cb.on_receive)
 {
@@ -374,6 +386,7 @@ if(client->cb.on_receive)
     client->cb.on_receive(client->buffer, recv_size, data);
 }
 ```
+Por fim interrompemos qualquer nova transação e fechamos o socket e retornamos o status
 ```c
 shutdown(client->socket, SHUT_RDWR);
 close(client->socket);
@@ -424,6 +437,7 @@ if(pid_led == 0)
 ```
 
 ### *button_interface*
+A implementação do Button_Run ficou simples, onde realizamos a inicialização do interface de botão e ficamos em loop aguardando o pressionamento do botão para alterar o estado da variável e enviar a mensagem para o servidor
 ```c
 bool Button_Run(TCP_Client_t *client, Button_Data *button)
 {
@@ -435,12 +449,14 @@ bool Button_Run(TCP_Client_t *client, Button_Data *button)
     while(true)
     {
         wait_press(button);
+        state ^= 0x01;
         TCP_Client_Connect(client, &state);
     }
 }
 ```
 
 ### *led_interface*
+A implementação do LED_Run ficou simples também, onde realizamos a inicialização da interface de LED, do servidor e ficamos em loop aguardando o recebimento de uma conexão.
 ```c
 bool LED_Run(TCP_Server_t *server, LED_Data *led)
 {
@@ -459,6 +475,17 @@ bool LED_Run(TCP_Server_t *server, LED_Data *led)
 ```
 
 ### *button_process*
+
+Definimos uma lista de comandos que iremos enviar
+```c
+const char *states[] = 
+{
+    "LED ON",
+    "LED OFF"
+};
+```
+
+A parametrização do cliente fica por conta do processo de botão que inicializa o contexto com o buffer, seu tamanho, o endereço do hostname, o serviço que deseja consumir e os callbacks preenchidos, nesse exemplo usaremos somente o de envio, não estando interessado na recepção, e assim passamos os argumentos para Button_Run iniciar o processo.
 ```c
 TCP_Client_t client = 
 {
@@ -471,7 +498,7 @@ TCP_Client_t client =
 
 Button_Run(&client, &button);
 ```
-
+A implementação no evento de envio, recuperamos o estado recebido e alteramos e indexamos com a lista de comando para enviar a mensagem
 ```c
 static int on_send(char *buffer, int *size, void *data)
 {
@@ -482,19 +509,21 @@ static int on_send(char *buffer, int *size, void *data)
     return 0;
 }
 ```
-
+A parametrização do servidor fica por conta do processo de LED que inicializa o contexto com o buffer, seu tamanho, a porta onde vai servir e os callbacks preenchidos, nesse exemplo usaremos somente o de recebimento, e assim passamos os argumentos para LED_Run iniciar o serviço.
 ### *led_process*
 ```c
  TCP_Server_t server = 
     {
-        .port = 5555,
         .buffer = server_buffer,
         .buffer_size = sizeof(server_buffer),
+        .port = 5555,
         .cb.on_receive = on_receive_message
     };
 
     LED_Run(&server, &data);
 ```
+
+A implementação no evento de recebimento da mensagem, compara a mensagem recebida com os comandos internos para o acionamento do LED, caso for igual executa a ação correspondente.
 
 ```c
 static int on_receive_message(char *buffer, int size, void *user_data)

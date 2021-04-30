@@ -34,6 +34,7 @@ bool Button_Run(TCP_Client_t *client, Button_Data *button)
     while(true)
     {
         wait_press(button);
-        TCP_Client_Connect(client, &state);
+        state ^= 0x01;
+        TCP_Client_Connect(client, &state);        
     }
 }
