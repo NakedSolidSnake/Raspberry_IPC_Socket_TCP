@@ -263,28 +263,85 @@ status = true;
 ```
 
 #### tcp_client.h
+Criamos também um contexto que armazena os paramêtros utilizados pelo cliente, sendo o _socket_ para armazenar a instância criada, _hostname_ é o ip que da máquina que vai ser conectar, _port_ que recebe o número que corresponde qual o serviço deseja consumir, _buffer_ que aponta para a memória alocada previamente pelo usuário, *buffer_size* o representa o tamanho do _buffer_ e a interface das funções de _callback_
 
 ```c
+typedef struct 
+{
+    int socket;
+    const char *hostname;
+    int port;
+    char *buffer;
+    size_t buffer_size;
+    TCP_Callback_t cb;
+} TCP_Client_t;
 ```
+
+Essa função realiza a conexão, envio e recebimento de mensagens para o servidor configurado
 ```c
+bool TCP_Client_Connect(TCP_Client_t *client, void *data);
 ```
-```c
-```
-```c
-```
-```c
-```
+
 #### tcp_client.c
+
 ```c
+bool status = false;
+int is_valid;
+struct sockaddr_in server;
+int send_size;
+int recv_size;
+```
+
+```c
+if(!client || !client->buffer || client->buffer_size <= 0)
+    break;
 ```
 ```c
+client->socket = socket(AF_INET, SOCK_STREAM, 0);
+if(client->socket < 0)
+    break;
+
 ```
 ```c
+server.sin_family = AF_INET;
+server.sin_port = htons(client->port);
 ```
 ```c
+is_valid = inet_pton(AF_INET, client->hostname, &server.sin_addr);
+if(is_valid <= 0)
+    break;
+```
+
+```c
+is_valid = connect(client->socket, (struct sockaddr *)&server, sizeof(server));
+if(is_valid < 0)
+    break;
+
+status = true;
+```
+
+```c
+if( status && client->cb.on_send)
 ```
 ```c
+client->cb.on_send(client->buffer, &send_size, data);
+send(client->socket, client->buffer, (int)fmin(send_size, client->buffer_size), 0);
 ```
+```c
+if(client->cb.on_receive)
+{
+    recv_size = recv(client->socket, client->buffer, client->buffer_size, 0);
+    client->cb.on_receive(client->buffer, recv_size, data);
+}
+```
+```c
+shutdown(client->socket, SHUT_RDWR);
+close(client->socket);
+
+return status;
+```
+
+
 
 
 
@@ -331,9 +388,9 @@ if(pid_led == 0)
 }
 ```
 
-## *button_interface*
+### *button_interface*
 descrever o código
-## *led_interface*
+### *led_interface*
 descrever o código
 
 ## Compilando, Executando e Matando os processos

@@ -58,5 +58,5 @@ bool TCP_Client_Connect(TCP_Client_t *client, void *data)
     shutdown(client->socket, SHUT_RDWR);
     close(client->socket);    
 
-    return false;
+    return status;
 }
