@@ -705,6 +705,8 @@ Esse sem dúvida é o melhor IPC, pois permite a comunicação entre processos n
 
 ## Referência
 * [Link do projeto completo](https://github.com/NakedSolidSnake/Raspberry_IPC_Socket_TCP)
+* [Linux Socket Programming by Example](https://www.amazon.com.br/Linux-Socket-Programming-Example-Warren/dp/0789722410/ref=sr_1_1?__mk_pt_BR=%C3%85M%C3%85%C5%BD%C3%95%C3%91&dchild=1&keywords=socket+by+example&qid=1619806986&sr=8-1)
+* [The Linux Programming Interface: A Linux and UNIX System Programming Handbook](https://www.amazon.com.br/Linux-Programming-Interface-System-Handbook/dp/1593272200/ref=sr_1_4?__mk_pt_BR=%C3%85M%C3%85%C5%BD%C3%95%C3%91&dchild=1&keywords=socket+by+example&qid=1619806986&sr=8-4)
 * [Mark Mitchell, Jeffrey Oldham, and Alex Samuel - Advanced Linux Programming](https://www.amazon.com.br/Advanced-Linux-Programming-CodeSourcery-LLC/dp/0735710430)
 * [fork, exec e daemon](https://github.com/NakedSolidSnake/Raspberry_fork_exec_daemon)
 * [biblioteca hardware](https://github.com/NakedSolidSnake/Raspberry_lib_hardware)
