@@ -26,7 +26,6 @@
 * [launch_processes](#launch_processes)
 * [button_interface](#button_interface)
 * [led_interface](#led_interface)
-* [led_interface](#led_interface)
 * [button_process](#button_process)
 * [led_process](#led_process)
 * [Compilando, Executando e Matando os processos](#compilando-executando-e-matando-os-processos)
