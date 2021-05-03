@@ -699,7 +699,11 @@ listening on lo, link-type EN10MB (Ethernet), capture size 262144 bytes
 	0x0030:  ccc4 0326 4c45 4420 4f46 4600            ...&LED.OFF.
 ```
 
-Podemos ver claramente que há o handshake, no instante 14:03:45.435884 IP 127.0.0.1.44800 > 127.0.0.1.5555, o cliente envia uma SYN para o server, no instante 14:03:45.435898 IP 127.0.0.1.5555 > 127.0.0.1.44800, o servidor responde com um SYN ACK, no instante 14:03:45.435911 IP 127.0.0.1.44800 > 127.0.0.1.5555, o cliente envia um ACK para o servidor e por fim o cliente envia a mensagem podendo ser vista no fim da ultima mensagem LED.OFF.
+Podemos ver que há o processo de _handshake_ seguido do envio da mensagem, como descritos a seguir:
+* No instante 14:03:45.435884 IP 127.0.0.1.44800 > 127.0.0.1.5555 o cliente envia uma SYN para o server
+* No instante 14:03:45.435898 IP 127.0.0.1.5555 > 127.0.0.1.44800 o servidor responde com um SYN ACK.
+* No instante 14:03:45.435911 IP 127.0.0.1.44800 > 127.0.0.1.5555 o cliente envia um ACK para o servidor.
+* E por fim, o cliente envia a mensagem podendo ser vista no fim da ultima mensagem LED.OFF.
 
 ## Testando conexão com o servidor via netcat
 A aplicação realiza a comunicação entre processos locais, para testar uma comunicação remota usaremos o netcat que permite se conectar de forma prática ao servidor e enviar os comandos. Para se conectar basta usar o seguinte comando:
