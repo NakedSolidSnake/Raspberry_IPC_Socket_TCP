@@ -29,20 +29,20 @@ Até o momento nos referimos a IPC's que permite a comunicação entre processos
 
 
 ## TCP
-O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento desse IPC, ou seja, na sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
-O TCP é considerado um protocolo confiável, pois provê garantia de entrega das mensagens, e de forma ordenada, roda sobre o protocolo IP, e sendo ele um protocolo orientado a conexão, necessita de uma troca de dados iniciais entre os envolvidos para estabelecer uma conexão TCP, conhecido como _handshake_, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
+O Assunto sobre TCP é imenso, por isso iremos nos limitar somente ao funcionamento, que é na sua aplicação, caso queria saber mais como o protocolo funciona, nas referências consta a bibliografia utilizada.
+O TCP é considerado um protocolo confiável, pois provê garantia de entrega das mensagens, e de forma ordenada, roda sobre o protocolo IP, e sendo ele um protocolo orientado a conexão, necessita de uma troca de dados iniciais entre os envolvidos para estabelecer uma conexão, conhecido como _handshake_, o cliente envia um SYN para o servidor, então o servidor responde com um SYN ACK e por fim o cliente responde com um ACK.
 
 <p align="center">
   <img src="./img/handshake.gif">
 </p>
 
-O TCP permite conexões entre processos em máquinas distintas, dessa forma podemos atribuir funções para cada uma dessas máquinas, caracterizando uma aplicação distribuída, onde cada possui uma responsabilidade dentro da aplicação. A figura abaixo demonstra a conexão entre duas máquinas:
+O TCP permite conexões entre processos em máquinas distintas, dessa forma podemos atribuir funções para cada uma dessas máquinas, caracterizando uma aplicação distribuída, onde cada máquina possui uma responsabilidade dentro da aplicação. A figura abaixo demonstra a conexão entre duas máquinas:
 
 <p align="center">
   <img src="./img/sockets.png">
 </p>
 
-Normalmente a arquitetuta mais empregada para esse protocolo é o Cliente/Servidor
+Normalmente a arquitetura mais empregada para esse protocolo é o Cliente/Servidor
 
 ## Conceito de servidor
 Pela definição do dicionário servidor é um computador que disponibiliza informação e serviços a outros computadores ligados em rede, dessa forma sempre deve estar disponível, para que quando desejado o acesso a ele sempre seja possível.
@@ -88,7 +88,7 @@ int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 
 ```
 
-Solicita uma comunicação
+Estabelece uma comunicação
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -145,7 +145,7 @@ Para a criação de uma conexão para cliente é necessário seguir alguns passo
 2. Realizar o fechamento do socket
 
 ## Preparação do Ambiente
-Antes de apresentarmos o exemplo, primeiro precisaremos instalar algumas ferramentas para auxiliar na análise da comunicação. As ferramentas necessárias para esse artigo são o tcpdump e o netcat(nc), para instalá-los basta executar os comandos abaixo:
+Antes de apresentarmos o exemplo, primeiro precisaremos instalar algumas ferramentas para auxiliar na análise da comunicação. As ferramentas necessárias para esse artigo são o tcpdump e o netcat(nc), para instalá-las basta executar os comandos abaixo:
 
 ```bash
 sudo apt-get update
@@ -160,7 +160,7 @@ sudo apt-get install tcpdump
 ```
 
 ## netcat
-O netcat é uma ferramenta capaz de interagir com conexões UDP e TCP, podendo abrir conexões, e ouvindo como um servidor, ou enviar mensanges para um servidor.
+O netcat é uma ferramenta capaz de interagir com conexões UDP e TCP, podendo abrir conexões, ouvindo como um servidor, ou com cliente enviando mensanges para um servidor.
 
 ## tcpdump
 O tcpdump é uma ferramenta capaz de monitorar o tráfego de dados em uma dada interface como por exemplo eth0, com ele é possível analisar os pacotes que são recebido e enviados.
@@ -211,14 +211,14 @@ bool TCP_Server_Exec(TCP_Server_t *server, void *data);
 ```
 #### tcp_server.c
 
-No TCP_Server_Init definimos algumas váriaveis para auxiliar na inicialização do servidor, sendo uma variável booleana que representa o estado da inicialização do servidor, uma variável do tipo inteiro que recebe o resultado das funções necessárias para a configuração, uma variável do tipo inteiro para habilitar o reuso da porta caso o servidor precise reiniciar e um estrutura sockaddr_in que é usada para configurar o servidor para se comunicar através da rede.
+No TCP_Server_Init definimos algumas váriaveis para auxiliar na inicialização do servidor, sendo uma variável booleana que representa o estado da inicialização do servidor, uma variável do tipo inteiro que recebe o resultado das funções necessárias para a configuração, uma variável do tipo inteiro para habilitar o reuso da porta caso o servidor precise reiniciar e uma estrutura sockaddr_in que é usada para configurar o servidor para se comunicar através da rede.
 ```c
 bool status = false;
 int is_valid;
 int enable_reuse = 1;
 struct sockaddr_in address;
 ```
-Para realizar a inicialização é criado um dummy do while, para que quando houver falha em qualquer uma das etapas sair da função com status de erro, nesse ponto verificamos se o contexto e o buffer foi inicializado, que é de reponsabilidade do usuário
+Para realizar a inicialização é criado um dummy do while, para que quando houver falha em qualquer uma das etapas, irá sair da função com status de erro, nesse ponto verificamos se o contexto e o buffer foi inicializado, que é de reponsabilidade do usuário
 
 ```c
 if(!server || !server->buffer)
@@ -287,7 +287,7 @@ if(server->cb.on_receive)
     server->cb.on_receive(server->buffer, read_len, data);
 }
 ```
-Aqui é verificado se o callback para envio foi configurado, dessa forma o buffer e passado para que a implementação prepare a mensagem a ser enviada, e alteramos o status para true, que a comunicação foi feita com sucesso.
+Aqui é verificado se o callback para envio foi configurado, dessa forma o buffer é passado para que a implementação prepare a mensagem a ser enviada, e alteramos o status para true, indicando que a comunicação foi feita com sucesso.
 ```c
 if(server->cb.on_send)
 {
@@ -298,7 +298,7 @@ if(server->cb.on_send)
 status = true;
 ``` 
 
-Interrompemos qualquer nova transação e fechamos o socket usando, concluindo a comunicação
+Interrompemos qualquer nova transação e fechamos o socket usado, concluindo a comunicação
 ```c
 shutdown(client_socket, SHUT_RDWR);
 close(client_socket);
@@ -334,7 +334,7 @@ struct sockaddr_in server;
 int send_size;
 int recv_size;
 ```
-Verificamos se o contexto do cliente, e o buffer estão inicializados
+Verificamos se o contexto e o buffer do cliente foram inicializados
 ```c
 if(!client || !client->buffer || client->buffer_size <= 0)
     break;
@@ -509,8 +509,9 @@ static int on_send(char *buffer, int *size, void *data)
     return 0;
 }
 ```
-A parametrização do servidor fica por conta do processo de LED que inicializa o contexto com o buffer, seu tamanho, a porta onde vai servir e os callbacks preenchidos, nesse exemplo usaremos somente o de recebimento, e assim passamos os argumentos para LED_Run iniciar o serviço.
+
 ### *led_process*
+A parametrização do servidor fica por conta do processo de LED que inicializa o contexto com o buffer, seu tamanho, a porta onde vai servir e os callbacks preenchidos, nesse exemplo usaremos somente o de recebimento, e assim passamos os argumentos para LED_Run iniciar o serviço.
 ```c
  TCP_Server_t server = 
     {
@@ -645,13 +646,13 @@ Output
        valid_lft forever preferred_lft forever
 ```
 
-Como podemos ver temos 4 interfaces no computar onde o comando foi executado, pode ser que a máquina que esteja usando possa ter mais interfaces ou menos interfaces. Para teste local, iremos usar a interface local denominada lo
+Como podemos ver temos 4 interfaces no computador onde o comando foi executado, pode ser que a máquina que esteja usando possa ter mais interfaces ou menos interfaces. Para teste local, iremos usar a interface local denominada lo, que representa a interface de loopback.
 
-O tcpdump possui opções que permite a visualização dos dados, não irei explicar tudo, fica de estudo para quem quiser saber mais sobre o protocolo TCP. Executando o comando:
+O tcpdump possui opções que permite a visualização dos dados, não irei explicar tudo, fica de estudo para quem quiser saber mais sobre a ferramenta. Executando o comando:
 ```bash
 sudo tcpdump -i lo -nnSX port 5555
 ```
-Após executar o comando o tcpdump ficará fazendo sniffing da conexão, dessa forma enviamos um comando e veremos a seguinte saída:
+Após executar o comando o tcpdump ficará fazendo sniffing da interface, tudo o que for trafegado nessa interface será apresentado, dessa forma enviamos um comando e veremos a seguinte saída:
 
 ```bash
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
@@ -691,7 +692,7 @@ Como descrito no comando ip usaremos o ip apresentado na interface enp0s31f6 que
 ```bash
 $ nc 10.0.0.100 5555
 ```
-E enviamos o comando LED ON, se visualizar no log irá apresentar que o comando foi executado
+E enviamos o comando LED ON, se visualizar no log irá apresentar que o comando foi executado, para monitorar com o tcpdump basta mudar a interface
 
 ## Matando os processos
 Para matar os processos criados execute o script kill_process.sh
@@ -701,7 +702,7 @@ $ ./kill_process.sh
 ```
 
 ## Conclusão
-Esse sem dúvida é o melhor IPC, pois permite a comunicação entre processos na mesma máquina e em máquinas fisicamente separadas, também é possível se comunicar com outras tecnologias, baseado em um protocolo padrão, além disso, permite outras utilizades como comunicação entre threads para evitar concorrências, criação de padrões arquiteturais como cliente/servidor utilizado nessa aplicação, bem como o a criação do Zeromq, porém toda essa facilidade, geramos um grande problema quando precisamos trafegar os dados em uma rede pública, quando feito dessa forma estamos expondo os nossos dados, como visto no tcpdump, mas existe uma forma de protegê-los. 
+Esse sem dúvida é o melhor IPC, pois permite a comunicação entre processos na mesma máquina e em máquinas fisicamente separadas, também é possível se comunicar com outras tecnologias, baseado em um protocolo padrão, além disso, permite outras utilidades como comunicação entre threads para evitar concorrências, criação de padrões arquiteturais como cliente/servidor utilizado nessa aplicação, bem como o a criação da biblioteca de comunicação conhecida como zeromq, porém toda essa facilidade, geramos um grande problema quando precisamos trafegar os dados em uma rede pública, quando feito dessa forma estamos expondo os nossos dados, como visto no tcpdump, mas existe uma forma de protegê-los. 
 
 ## Referência
 * [Link do projeto completo](https://github.com/NakedSolidSnake/Raspberry_IPC_Socket_TCP)
