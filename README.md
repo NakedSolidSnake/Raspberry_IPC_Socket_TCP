@@ -726,7 +726,7 @@ $ ./kill_process.sh
 ```
 
 ## Conclusão
-Esse sem dúvida é o melhor IPC, pois permite a comunicação entre processos na mesma máquina e em máquinas fisicamente separadas, também é possível se comunicar com outras tecnologias, baseado em um protocolo padrão, além disso, permite outras utilidades como comunicação entre threads para evitar concorrências, criação de padrões arquiteturais como cliente/servidor utilizado nessa aplicação, bem como o a criação da biblioteca de comunicação conhecida como zeromq, porém toda essa facilidade, geramos um grande problema quando precisamos trafegar os dados em uma rede pública, quando feito dessa forma estamos expondo os nossos dados, como visto no tcpdump, mas existe uma forma de protegê-los. 
+Esse sem dúvida é o melhor IPC, pois permite a comunicação entre processos na mesma máquina e em máquinas fisicamente separadas, também é possível se comunicar com outras tecnologias baseado em um protocolo padrão, além disso, permite outras utilidades como comunicação entre threads para evitar concorrências, criação de padrões arquiteturais como cliente/servidor utilizado nessa aplicação, bem como a criação da biblioteca de comunicação conhecida como zeromq. Porém com toda essa facilidade, gera-se um grande problema quando precisa-se trafegar os dados em uma rede pública, quando feito dessa forma os dados estão sendo expostos como visto no tcpdump, mas existe uma forma de protegê-los, assunto para o próximo artigo. 
 
 ## Referência
 * [Link do projeto completo](https://github.com/NakedSolidSnake/Raspberry_IPC_Socket_TCP)
